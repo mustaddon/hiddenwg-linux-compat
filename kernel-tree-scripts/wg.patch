@@ -1,0 +1,95 @@
+diff -NauBw ./receive.c ./receive.c
+--- ./receive.c	2026-05-06 16:07:16.822033015 +0200
++++ ./receive.c	2026-05-06 16:41:17.534672545 +0200
+@@ -6,1 +6,2 @@
+-#include "queueing.h"
++#include "hidden.h"
++#include "queueing.h"
+@@ -79,10 +79,19 @@
+ 	data_len -= sizeof(struct udphdr);
+ 	data_offset = (u8 *)udp + sizeof(struct udphdr) - skb->data;
+-	if (unlikely(!pskb_may_pull(skb,
+-				data_offset + sizeof(struct message_header)) ||
+-		     pskb_trim(skb, data_len + data_offset) < 0))
+-		return -EINVAL;
+ 	skb_pull(skb, data_offset);
++
++	/* calc hidden */
++	header_len = prepare_skb_hidden(skb, wg);
++	if(header_len > 0)
++	{
++		if(header_len == ERROR_HIDDEN_LEN)
++			return -EINVAL;
++		data_len -= header_len;
++		data_offset += header_len;
++	}
++	
++	if (unlikely(pskb_trim(skb, data_len) < 0))
++		return -EINVAL;
+ 	if (unlikely(skb->len != data_len))
+ 		/* Final len does not agree with calculated len */
+ 		return -EINVAL;
+diff -NauBw ./send.c ./send.c
+--- ./send.c	2026-05-06 16:07:16.822033015 +0200
++++ ./send.c	2026-05-06 17:08:24.810366991 +0200
+@@ -6,1 +6,2 @@
+-#include "queueing.h"
++#include "hidden.h"
++#include "queueing.h"
+@@ -223,3 +223,3 @@
+	if (skb_queue_empty(&peer->staged_packet_queue)) {
+-		skb = alloc_skb(DATA_PACKET_HEAD_ROOM + MESSAGE_MINIMUM_LENGTH,
++		skb = alloc_skb(DATA_PACKET_HEAD_ROOM + MESSAGE_MINIMUM_LENGTH + HIDDEN_HS_LEN,
+				GFP_ATOMIC);
+@@ -249,2 +249,3 @@
+		is_keepalive = skb->len == message_data_len(0);
++		skb_push_hidden_data(skb, peer, is_keepalive);
+		if (likely(!wg_socket_send_skb_to_peer(peer, skb,
+diff -NauBw ./socket.c ./socket.c
+--- ./socket.c	2026-05-06 16:07:16.822033015 +0200
++++ ./socket.c	2026-05-06 16:44:55.541329023 +0200
+@@ -6,1 +6,2 @@
+-#include "device.h"
++#include "hidden.h"
++#include "device.h"
+@@ -203,1 +203,1 @@
+-	struct sk_buff *skb = alloc_skb(len + SKB_HEADER_LEN, GFP_ATOMIC);
++	struct sk_buff *skb = alloc_skb(len + SKB_HEADER_LEN + HIDDEN_HS_LEN, GFP_ATOMIC);
+@@ -208,4 +208,5 @@
+ 	skb_reserve(skb, SKB_HEADER_LEN);
+ 	skb_set_inner_network_header(skb, 0);
++	skb_push_hidden_handshake(skb, buffer, peer);
+ 	skb_put_data(skb, buffer, len);
+ 	return wg_socket_send_skb_to_peer(peer, skb, ds);
+@@ -228,6 +228,7 @@
+-	skb = alloc_skb(len + SKB_HEADER_LEN, GFP_ATOMIC);
++	skb = alloc_skb(len + SKB_HEADER_LEN + HIDDEN_HS_LEN, GFP_ATOMIC);
+ 	if (unlikely(!skb))
+ 		return -ENOMEM;
+ 	skb_reserve(skb, SKB_HEADER_LEN);
+ 	skb_set_inner_network_header(skb, 0);
++	skb_push_hidden_handshake_cookie(skb, buffer, wg);
+ 	skb_put_data(skb, buffer, len);
+diff -NauBw ./main.c ./main.c
+--- ./main.c	2026-05-06 16:07:16.822033015 +0200
++++ ./main.c	2026-05-06 16:44:55.541329023 +0200
+@@ -39,2 +39,2 @@
+-	pr_info("WireGuard " WIREGUARD_VERSION " loaded. See www.wireguard.com for information.\n");
+-	pr_info("Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.\n");
++	pr_info("HiddenWG " WIREGUARD_VERSION " loaded (https://github.com/mustaddon/wireguard-linux-compat).\n");
++	pr_info("Copyright (C) 2026 Leonid Salavatov. All Rights Reserved.\n");
+diff -NauBw ./Makefile ./Makefile
+--- ./Makefile	2026-05-06 16:07:16.822033015 +0200
++++ ./Makefile	2026-05-06 16:44:55.541329023 +0200
+@@ -11,2 +11,3 @@
+ wireguard-y += receive.o
++wireguard-y += hidden.o
+ wireguard-y += socket.o
+@@ -18,1 +18,7 @@
+ obj-$(CONFIG_WIREGUARD) := wireguard.o
++
++all:
++	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) modules
++
++clean:
++	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) clean

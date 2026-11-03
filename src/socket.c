@@ -3,6 +3,7 @@
  * Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
  */
 
+#include "hidden.h"
 #include "device.h"
 #include "peer.h"
 #include "socket.h"
@@ -189,13 +190,14 @@ int wg_socket_send_skb_to_peer(struct wg_peer *peer, struct sk_buff *skb, u8 ds)
 int wg_socket_send_buffer_to_peer(struct wg_peer *peer, void *buffer,
 				  size_t len, u8 ds)
 {
-	struct sk_buff *skb = alloc_skb(len + SKB_HEADER_LEN, GFP_ATOMIC);
+	struct sk_buff *skb = alloc_skb(len + SKB_HEADER_LEN + HIDDEN_HS_LEN, GFP_ATOMIC);
 
 	if (unlikely(!skb))
 		return -ENOMEM;
 
 	skb_reserve(skb, SKB_HEADER_LEN);
 	skb_set_inner_network_header(skb, 0);
+	skb_push_hidden_handshake(skb, buffer, peer);
 	skb_put_data(skb, buffer, len);
 	return wg_socket_send_skb_to_peer(peer, skb, ds);
 }
@@ -214,11 +216,12 @@ int wg_socket_send_buffer_as_reply_to_skb(struct wg_device *wg,
 	if (unlikely(ret < 0))
 		return ret;
 
-	skb = alloc_skb(len + SKB_HEADER_LEN, GFP_ATOMIC);
+	skb = alloc_skb(len + SKB_HEADER_LEN + HIDDEN_HS_LEN, GFP_ATOMIC);
 	if (unlikely(!skb))
 		return -ENOMEM;
 	skb_reserve(skb, SKB_HEADER_LEN);
 	skb_set_inner_network_header(skb, 0);
+	skb_push_hidden_handshake_cookie(skb, buffer, wg);
 	skb_put_data(skb, buffer, len);
 
 	if (endpoint.addr.sa_family == AF_INET)

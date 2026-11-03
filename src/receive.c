@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
  */
-
+#include "hidden.h"
 #include "queueing.h"
 #include "device.h"
 #include "peer.h"
@@ -79,11 +79,22 @@ static int prepare_skb_header(struct sk_buff *skb, struct wg_device *wg)
 		return -EINVAL;
 	data_len -= sizeof(struct udphdr);
 	data_offset = (u8 *)udp + sizeof(struct udphdr) - skb->data;
-	if (unlikely(!pskb_may_pull(skb,
-				data_offset + sizeof(struct message_header)) ||
-		     pskb_trim(skb, data_len + data_offset) < 0))
-		return -EINVAL;
+
 	skb_pull(skb, data_offset);
+
+	/* calc hidden */
+	header_len = prepare_skb_hidden(skb, wg);
+	if(header_len > 0)
+	{
+		if(header_len == ERROR_HIDDEN_LEN)
+			return -EINVAL;
+		data_len -= header_len;
+		data_offset += header_len;
+	}
+	
+	if (unlikely(pskb_trim(skb, data_len) < 0))
+		return -EINVAL;
+
 	if (unlikely(skb->len != data_len))
 		/* Final len does not agree with calculated len */
 		return -EINVAL;
@@ -108,7 +119,7 @@ static void wg_receive_handshake_packet(struct wg_device *wg,
 	static u64 last_under_load;
 	bool packet_needs_cookie;
 	bool under_load;
-
+	
 	if (SKB_TYPE_LE32(skb) == cpu_to_le32(MESSAGE_HANDSHAKE_COOKIE)) {
 		net_dbg_skb_ratelimited("%s: Receiving cookie response from %pISpfsc\n",
 					wg->dev->name, skb);

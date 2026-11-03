@@ -1,9 +1,15 @@
-# WireGuard for Linux 3.10 - 5.5
+# HiddenWG for Linux 3.10 - x.x
 
-WireGuard was merged into the Linux kernel for 5.6. This repository contains a backport of WireGuard for kernels 3.10 to 5.5, as an out of tree module.
+This repository is a [fork](https://github.com/WireGuard/wireguard-linux-compat/) that adds obfuscation to the standard [WireGuard](https://www.wireguard.com/) protocol.
 
-**More information may be found at [WireGuard.com](https://www.wireguard.com/).**
+## Driver installation script 
+```bash
+wget --no-cache -O hwg-install.sh https://raw.githubusercontent.com/mustaddon/wireguard-linux-compat/refs/heads/master/kernel-tree-scripts/install.sh
+sudo bash hwg-install.sh
+```
 
-## License
-
-This project is released under the [GPLv2](COPYING).
+## Server setup script 
+```bash
+wget --no-cache -O wg-server.sh https://raw.githubusercontent.com/mustaddon/wireguard-linux-compat/refs/heads/master/kernel-tree-scripts/server.sh
+sudo bash wg-server.sh
+```

@@ -3,6 +3,7 @@
  * Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
  */
 
+#include "hidden.h"
 #include "queueing.h"
 #include "timers.h"
 #include "device.h"
@@ -226,7 +227,7 @@ void wg_packet_send_keepalive(struct wg_peer *peer)
 	struct sk_buff *skb;
 
 	if (skb_queue_empty(&peer->staged_packet_queue)) {
-		skb = alloc_skb(DATA_PACKET_HEAD_ROOM + MESSAGE_MINIMUM_LENGTH,
+		skb = alloc_skb(DATA_PACKET_HEAD_ROOM + MESSAGE_MINIMUM_LENGTH + HIDDEN_HS_LEN,
 				GFP_ATOMIC);
 		if (unlikely(!skb))
 			return;
@@ -251,6 +252,7 @@ static void wg_packet_create_data_done(struct wg_peer *peer, struct sk_buff *fir
 	wg_timers_any_authenticated_packet_sent(peer);
 	skb_list_walk_safe(first, skb, next) {
 		is_keepalive = skb->len == message_data_len(0);
+		skb_push_hidden_data(skb, peer, is_keepalive);
 		if (likely(!wg_socket_send_skb_to_peer(peer, skb,
 				PACKET_CB(skb)->ds) && !is_keepalive))
 			data_sent = true;
