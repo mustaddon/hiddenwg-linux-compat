@@ -5,6 +5,43 @@ if [ "${EUID}" -ne 0 ]; then
     exit 1
 fi
 
+MOD_DIR=$(find "/lib/modules/$(uname -r)" -type d -name "wireguard")
+
+if [ ! -d "$MOD_DIR" ]; then
+    echo "Error: Wireguard module directory not found."
+    exit 1
+fi
+
+function restartWg() {
+    depmod -a
+    modprobe wireguard
+    dmesg | grep -i wireguard
+    systemctl restart wg-quick@*
+}
+
+MOD_BAK=$"$MOD_DIR/_uninstall.hwg"
+
+if [ -f "$MOD_BAK" ]; then
+    echo "The patch is already installed. What do you want to do?"
+    echo "   1) Reinstall"
+    echo "   2) Uninstall"
+    echo "   3) Exit"
+    until [[ ${MENU_OPTION} =~ ^[1-3]$ ]]; do
+        read -rp "Select an option [1-3]: " MENU_OPTION
+    done
+    case "${MENU_OPTION}" in
+    2)
+        modprobe -r wireguard
+        mv -f "$MOD_BAK" "$MOD_DIR/wireguard.ko"
+        restartWg
+        exit 0
+        ;;
+    3)
+        exit 0
+        ;;
+    esac
+fi
+
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     if [[ "$ID" == 'ubuntu' ]] || [[ "$ID" == 'debian' ]]; then
@@ -106,17 +143,11 @@ if [ ! -f "$CODE_DIR/wireguard.ko" ]; then
     exit 1
 fi
 
-MOD_DIR=$(find "/lib/modules/$(uname -r)" -type d -name "wireguard")
-
-if [ ! -d "$MOD_DIR" ]; then
-    echo "Error: Wireguard module directory not found."
-    exit 1
+if [ ! -f "$MOD_BAK" ]; then
+    cp "$MOD_DIR/wireguard.ko" "$MOD_BAK"
 fi
 
 modprobe -r wireguard
 rm -rf "$MOD_DIR"/wireguard.ko*
 cp "$CODE_DIR/wireguard.ko" "$MOD_DIR"
-depmod -a
-modprobe wireguard
-dmesg | grep -i wireguard
-systemctl restart wg-quick@*
+restartWg
