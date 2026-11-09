@@ -1,11 +1,10 @@
-# HiddenWG for Linux 3.10 - x.x
+# HiddenWG for Linux
 
 This repository is a [fork](https://github.com/WireGuard/wireguard-linux-compat/) that adds obfuscation to the standard [WireGuard](https://www.wireguard.com/) protocol.
 
 ## Driver installation script 
 ```bash
-wget --no-cache -O hwg-install.sh https://raw.githubusercontent.com/mustaddon/wireguard-linux-compat/refs/heads/master/kernel-tree-scripts/install.sh
-sudo bash hwg-install.sh
+sudo bash <(wget --no-cache -qO- https://raw.githubusercontent.com/mustaddon/wireguard-linux-compat/refs/heads/master/kernel-tree-scripts/install.sh)
 ```
 
 ## Server setup script 
