@@ -50,9 +50,8 @@ static int __init wg_mod_init(void)
 	if (ret < 0)
 		goto err_netlink;
 
-	pr_info("HiddenWG " WIREGUARD_VERSION " loaded (https://github.com/mustaddon/wireguard-linux-compat).\n");
-	pr_info("Copyright (C) 2026 Leonid Salavatov. All Rights Reserved.\n");
-
+	pr_info("HiddenWG " WIREGUARD_VERSION " loaded (https://github.com/mustaddon/hiddenwg-linux-compat).\n");
+	
 	return 0;
 
 err_netlink:

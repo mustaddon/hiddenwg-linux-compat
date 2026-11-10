@@ -68,7 +68,7 @@ rm -rf "$TMP_DIR"
 trap "rm -rf $TMP_DIR; cd $START_DIR" EXIT SIGINT SIGTERM
 
 function compileCompat() {
-    git clone --branch "$BRANCH" --single-branch --depth 1 --no-checkout https://github.com/mustaddon/wireguard-linux-compat "$TMP_DIR"
+    git clone --branch "$BRANCH" --single-branch --depth 1 --no-checkout https://github.com/mustaddon/hiddenwg-linux-compat "$TMP_DIR"
     cd "$TMP_DIR"
     git sparse-checkout set src
     git checkout
@@ -85,7 +85,7 @@ function compileCompat() {
 
 function applyPatch() {
     if [ -n "$1" ]; then
-        wget --no-cache "https://raw.githubusercontent.com/mustaddon/wireguard-linux-compat/refs/heads/$BRANCH/kernel-tree-scripts/$1"
+        wget --no-cache "https://raw.githubusercontent.com/mustaddon/hiddenwg-linux-compat/refs/heads/$BRANCH/kernel-tree-scripts/$1"
 
         if [ ! -f "$1" ]; then
             echo "Error: Patch '$1' not found."
@@ -124,7 +124,7 @@ function compile() {
 
     applyPatch "wg.patch"
 
-    wget --no-cache -N https://raw.githubusercontent.com/mustaddon/wireguard-linux-compat/refs/heads/$BRANCH/src/{hidden.h,hidden.c,version.h}
+    wget --no-cache -N https://raw.githubusercontent.com/mustaddon/hiddenwg-linux-compat/refs/heads/$BRANCH/src/{hidden.h,hidden.c,version.h}
 
     make
 }

@@ -73,11 +73,10 @@ diff -NauBw ./socket.c ./socket.c
 diff -NauBw ./main.c ./main.c
 --- ./main.c	2026-05-06 16:07:16.822033015 +0200
 +++ ./main.c	2026-05-06 16:44:55.541329023 +0200
-@@ -39,2 +39,2 @@
+@@ -39,2 +39,1 @@
 -	pr_info("WireGuard " WIREGUARD_VERSION " loaded. See www.wireguard.com for information.\n");
 -	pr_info("Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.\n");
-+	pr_info("HiddenWG " WIREGUARD_VERSION " loaded (https://github.com/mustaddon/wireguard-linux-compat).\n");
-+	pr_info("Copyright (C) 2026 Leonid Salavatov. All Rights Reserved.\n");
++	pr_info("HiddenWG " WIREGUARD_VERSION " loaded (https://github.com/mustaddon/hiddenwg-linux-compat).\n");
 diff -NauBw ./Makefile ./Makefile
 --- ./Makefile	2026-05-06 16:07:16.822033015 +0200
 +++ ./Makefile	2026-05-06 16:44:55.541329023 +0200
