@@ -37,14 +37,14 @@ diff -NauBw ./send.c ./send.c
 +#include "hidden.h"
 +#include "queueing.h"
 @@ -223,3 +223,3 @@
-	if (skb_queue_empty(&peer->staged_packet_queue)) {
+ 	if (skb_queue_empty(&peer->staged_packet_queue)) {
 -		skb = alloc_skb(DATA_PACKET_HEAD_ROOM + MESSAGE_MINIMUM_LENGTH,
 +		skb = alloc_skb(DATA_PACKET_HEAD_ROOM + MESSAGE_MINIMUM_LENGTH + HIDDEN_HS_LEN,
-				GFP_ATOMIC);
+ 				GFP_ATOMIC);
 @@ -249,2 +249,3 @@
-		is_keepalive = skb->len == message_data_len(0);
+ 		is_keepalive = skb->len == message_data_len(0);
 +		skb_push_hidden_data(skb, peer, is_keepalive);
-		if (likely(!wg_socket_send_skb_to_peer(peer, skb,
+ 		if (likely(!wg_socket_send_skb_to_peer(peer, skb,
 diff -NauBw ./socket.c ./socket.c
 --- ./socket.c	2026-05-06 16:07:16.822033015 +0200
 +++ ./socket.c	2026-05-06 16:44:55.541329023 +0200
