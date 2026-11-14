@@ -30,6 +30,9 @@ dependencies listed in `dev-scripts/setup.sh`:
 bash dev-scripts/setup.sh
 ```
 
+The setup script supports Ubuntu/Debian, Fedora, CentOS/RHEL, and Arch Linux.
+It uses `sudo` when needed and requires headers matching the running kernel.
+
 Then build it against the complete build tree for the target kernel:
 
 ```bash
