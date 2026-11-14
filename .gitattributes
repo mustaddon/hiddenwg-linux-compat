@@ -3,3 +3,4 @@
 dev-scripts/deploy.sh text eol=lf
 dev-scripts/setup.sh text eol=lf
 kernel-tree-scripts/install-compat.sh text eol=lf
+kernel-tree-scripts/install.sh text eol=lf

@@ -206,7 +206,7 @@ else
     TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/hiddenwg-install.XXXXXX")"
     trap 'rm -rf -- "$TMP_DIR"' EXIT
 
-    git clone --branch "$BRANCH" https://github.com/mustaddon/hiddenwg-linux-compat "$TMP_DIR"
+    git clone --branch "$BRANCH" --single-branch --depth 1 https://github.com/mustaddon/hiddenwg-linux-compat "$TMP_DIR"
     REPO_DIR="$TMP_DIR"
 fi
 
@@ -231,36 +231,66 @@ if [ "${MODULE_VERMAGIC%% *}" != "$KERNEL_RELEASE" ]; then
     exit 1
 fi
 
-if [ ! -f "$MOD_BAK" ]; then
-    backup_tmp="$(mktemp "$MOD_DIR/.wireguard-backup.XXXXXX")"
-    backup_name_tmp="$(mktemp "$MOD_DIR/.wireguard-backup-name.XXXXXX")"
-    cp -p -- "$MODULE_FILE" "$backup_tmp"
-    printf '%s\n' "$(basename -- "$MODULE_FILE")" > "$backup_name_tmp"
-    mv -f -- "$backup_name_tmp" "$MOD_BAK_NAME"
-    mv -f -- "$backup_tmp" "$MOD_BAK"
-fi
+new_module_tmp=""
+backup_tmp=""
+backup_name_tmp=""
+backup_created=false
+module_unloaded=false
+module_files_changed=false
 
-if [ -d /sys/module/wireguard ]; then
-    modprobe -r wireguard
-fi
+cleanup_module_temps() {
+    [ -z "$new_module_tmp" ] || rm -f -- "$new_module_tmp"
+    [ -z "$backup_tmp" ] || rm -f -- "$backup_tmp"
+    [ -z "$backup_name_tmp" ] || rm -f -- "$backup_name_tmp"
+}
 
-new_module_tmp="$(mktemp "$MOD_DIR/.wireguard-module.XXXXXX")"
-cp -- "$NEW_MODULE" "$new_module_tmp"
-chmod 0644 "$new_module_tmp"
-mv -f -- "$new_module_tmp" "$MOD_DIR/wireguard.ko"
-rm -f -- \
-    "$MOD_DIR/wireguard.ko.xz" \
-    "$MOD_DIR/wireguard.ko.gz" \
-    "$MOD_DIR/wireguard.ko.zst"
-depmod -a "$KERNEL_RELEASE"
+install_module() {
+    if [ ! -f "$MOD_BAK" ]; then
+        backup_tmp="$(mktemp "$MOD_DIR/.wireguard-backup.XXXXXX")" || return 1
+        backup_name_tmp="$(mktemp "$MOD_DIR/.wireguard-backup-name.XXXXXX")" || return 1
+        cp -p -- "$MODULE_FILE" "$backup_tmp" || return 1
+        printf '%s\n' "$(basename -- "$MODULE_FILE")" > "$backup_name_tmp" || return 1
+        mv -f -- "$backup_name_tmp" "$MOD_BAK_NAME" || return 1
+        backup_name_tmp=""
+        mv -f -- "$backup_tmp" "$MOD_BAK" || return 1
+        backup_tmp=""
+        backup_created=true
+    fi
 
-if ! modprobe wireguard; then
-    echo "Error: New module failed to load; attempting to restore the previous module." >&2
-    if restore_original_module; then
+    new_module_tmp="$(mktemp "$MOD_DIR/.wireguard-module.XXXXXX")" || return 1
+    cp -- "$NEW_MODULE" "$new_module_tmp" || return 1
+    chmod 0644 "$new_module_tmp" || return 1
+
+    if [ -d /sys/module/wireguard ]; then
+        modprobe -r wireguard || return 1
+        module_unloaded=true
+    fi
+
+    mv -f -- "$new_module_tmp" "$MOD_DIR/wireguard.ko" || return 1
+    new_module_tmp=""
+    module_files_changed=true
+    rm -f -- \
+        "$MOD_DIR/wireguard.ko.xz" \
+        "$MOD_DIR/wireguard.ko.gz" \
+        "$MOD_DIR/wireguard.ko.zst" || return 1
+    depmod -a "$KERNEL_RELEASE" || return 1
+    modprobe wireguard || return 1
+}
+
+if ! install_module; then
+    echo "Error: Module installation failed; attempting to restore the previous module." >&2
+    cleanup_module_temps || true
+    if { [ "$module_files_changed" = true ] || [ "$module_unloaded" = true ]; } &&
+        [ -f "$MOD_BAK" ] && restore_original_module; then
         rm -f -- "$MOD_BAK" "$MOD_BAK_NAME"
         echo "Previous WireGuard module restored." >&2
+    elif [ "$module_files_changed" = false ] && [ "$module_unloaded" = false ]; then
+        if [ "$backup_created" = true ]; then
+            rm -f -- "$MOD_BAK" "$MOD_BAK_NAME"
+        fi
+        echo "The existing WireGuard module was not changed." >&2
     else
-        echo "Error: Automatic rollback failed. The backup remains at '$MOD_BAK'." >&2
+        echo "Error: Automatic rollback failed. The backup, if created, remains at '$MOD_BAK'." >&2
     fi
     exit 1
 fi
