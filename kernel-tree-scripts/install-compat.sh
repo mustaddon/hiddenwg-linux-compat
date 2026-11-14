@@ -197,11 +197,20 @@ if [ -f "$MOD_BAK" ]; then
 fi
 
 BRANCH="hwg-ai"
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/hiddenwg-install.XXXXXX")"
-trap 'rm -rf -- "$TMP_DIR"' EXIT
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
-git clone --branch "$BRANCH" https://github.com/mustaddon/hiddenwg-linux-compat "$TMP_DIR/repository"
-CODE_DIR="$TMP_DIR/repository/src"
+if [ -f "$REPO_DIR/src/Makefile" ] && [ -f "$REPO_DIR/src/Kbuild" ]; then
+    echo "Using local source tree at '$REPO_DIR'."
+else
+    TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/hiddenwg-install.XXXXXX")"
+    trap 'rm -rf -- "$TMP_DIR"' EXIT
+
+    git clone --branch "$BRANCH" https://github.com/mustaddon/hiddenwg-linux-compat "$TMP_DIR"
+    REPO_DIR="$TMP_DIR"
+fi
+
+CODE_DIR="$REPO_DIR/src"
 
 if [ ! -d "$CODE_DIR" ]; then
     echo "Error: Directory '$CODE_DIR' does not exist." >&2
