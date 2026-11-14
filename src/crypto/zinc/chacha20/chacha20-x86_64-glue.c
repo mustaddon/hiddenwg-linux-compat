@@ -7,6 +7,7 @@
 #include <asm/cpufeature.h>
 #include <asm/processor.h>
 #include <asm/intel-family.h>
+#include <intel-family-compat.h>
 
 asmlinkage void hchacha20_ssse3(u32 *derived_key, const u8 *nonce,
 				const u8 *key);

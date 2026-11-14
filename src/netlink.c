@@ -198,7 +198,11 @@ static int wg_get_device_start(struct netlink_callback *cb)
 {
 	struct wg_device *wg;
 
+#ifdef COMPAT_GENL_DUMP_INFO
+	wg = lookup_interface(genl_dumpit_info(cb)->info.attrs, cb->skb);
+#else
 	wg = lookup_interface(genl_dumpit_info(cb)->attrs, cb->skb);
+#endif
 	if (IS_ERR(wg))
 		return PTR_ERR(wg);
 	DUMP_CTX(cb)->wg = wg;

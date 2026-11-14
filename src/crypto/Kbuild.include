@@ -41,11 +41,15 @@ quiet_cmd_perlasm = PERLASM $@
       cmd_perlasm = $(PERL) $< > $@
 $(obj)/%.S: $(src)/%.pl FORCE
 	$(call if_changed,perlasm)
-kbuild-dir := $(if $(filter /%,$(src)),$(src),$(srctree)/$(src))
+kbuild-dir := $(if $(filter /%,$(src)),$(src),$(if $(KBUILD_EXTMOD),$(CURDIR)/$(src),$(srctree)/$(src)))
 targets := $(patsubst $(kbuild-dir)/%.pl,%.S,$(wildcard $(patsubst %.o,$(kbuild-dir)/crypto/zinc/%.pl,$(zinc-y) $(zinc-m) $(zinc-))))
 
-# Old kernels don't set this, which causes trouble.
+# Older kernels don't set this, which causes trouble.
+ifneq ($(and $(filter notintermediate, $(.FEATURES)),$(filter-out 4.4,$(MAKE_VERSION))),)
+.NOTINTERMEDIATE:
+else
 .SECONDARY:
+endif
 
 wireguard-y += $(addprefix crypto/zinc/,$(zinc-y))
 ccflags-y += -I$(kbuild-dir)/crypto/include

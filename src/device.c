@@ -19,8 +19,10 @@
 #include <linux/if_arp.h>
 #include <linux/icmp.h>
 #include <linux/suspend.h>
+#include <linux/timer.h>
 #include <net/dst_metadata.h>
 #include <net/icmp.h>
+#include <net/gso.h>
 #include <net/rtnetlink.h>
 #include <net/ip_tunnels.h>
 #include <net/addrconf.h>
@@ -228,7 +230,11 @@ static const struct net_device_ops netdev_ops = {
 	.ndo_open		= wg_open,
 	.ndo_stop		= wg_stop,
 	.ndo_start_xmit		= wg_xmit,
+#ifdef COMPAT_USE_DEV_TSTATS64
+	.ndo_get_stats64	= dev_get_tstats64
+#else
 	.ndo_get_stats64	= ip_tunnel_get_stats64
+#endif
 };
 
 static void wg_destruct(struct net_device *dev)
@@ -286,7 +292,9 @@ static void wg_setup(struct net_device *dev)
 #else
 	dev->tx_queue_len = 0;
 #endif
+#ifdef NETIF_F_LLTX
 	dev->features |= NETIF_F_LLTX;
+#endif
 	dev->features |= WG_NETDEV_FEATURES;
 	dev->hw_features |= WG_NETDEV_FEATURES;
 	dev->hw_enc_features |= WG_NETDEV_FEATURES;
@@ -304,9 +312,9 @@ static void wg_setup(struct net_device *dev)
 	wg->dev = dev;
 }
 
-static int wg_newlink(struct net *src_net, struct net_device *dev,
-		      struct nlattr *tb[], struct nlattr *data[],
-		      struct netlink_ext_ack *extack)
+static int wg_newlink_impl(struct net *src_net, struct net_device *dev,
+			   struct nlattr *tb[], struct nlattr *data[],
+			   struct netlink_ext_ack *extack)
 {
 	struct wg_device *wg = netdev_priv(dev);
 	int ret = -ENOMEM;
@@ -402,6 +410,18 @@ err_free_peer_hashtable:
 	kvfree(wg->peer_hashtable);
 	return ret;
 }
+
+#ifdef COMPAT_NEWLINK_PARAMS
+static int wg_newlink(struct net_device *dev,
+		      struct rtnl_newlink_params *params,
+		      struct netlink_ext_ack *extack)
+{
+	return wg_newlink_impl(params->src_net, dev, params->tb, params->data,
+			       extack);
+}
+#else
+#define wg_newlink wg_newlink_impl
+#endif
 
 static struct rtnl_link_ops link_ops __read_mostly = {
 	.kind			= KBUILD_MODNAME,

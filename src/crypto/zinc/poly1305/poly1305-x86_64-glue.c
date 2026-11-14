@@ -6,6 +6,7 @@
 #include <asm/cpufeature.h>
 #include <asm/processor.h>
 #include <asm/intel-family.h>
+#include <intel-family-compat.h>
 
 asmlinkage void poly1305_init_x86_64(void *ctx,
 				     const u8 key[POLY1305_KEY_SIZE]);

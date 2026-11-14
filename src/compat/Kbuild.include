@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
-kbuild-dir := $(if $(filter /%,$(src)),$(src),$(srctree)/$(src))
+kbuild-dir := $(if $(filter /%,$(src)),$(src),$(if $(KBUILD_EXTMOD),$(CURDIR)/$(src),$(srctree)/$(src)))
 
 ccflags-y += -include $(kbuild-dir)/compat/compat.h
 asflags-y += -include $(kbuild-dir)/compat/compat-asm.h
@@ -26,8 +26,11 @@ ccflags-y += -I$(kbuild-dir)/compat/dst_cache/include
 wireguard-y += compat/dst_cache/dst_cache.o
 endif
 
-ifeq ($(wildcard $(srctree)/arch/x86/include/asm/intel-family.h)$(CONFIG_X86),y)
+ifeq ($(CONFIG_X86),y)
 ccflags-y += -I$(kbuild-dir)/compat/intel-family-x86/include
+ifneq ($(wildcard $(srctree)/arch/x86/include/asm/cpu_device_id.h),)
+ccflags-y += -DCOMPAT_HAS_CPU_DEVICE_ID_HEADER
+endif
 endif
 
 ifeq ($(wildcard $(srctree)/arch/x86/include/asm/fpu/api.h)$(CONFIG_X86),y)
@@ -42,14 +45,67 @@ ifeq ($(wildcard $(srctree)/include/linux/simd.h),)
 ccflags-y += -I$(kbuild-dir)/compat/simd/include
 endif
 
+ifeq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/asm/unaligned.h),)
+ifneq ($(wildcard $(srctree)/include/linux/unaligned.h),)
+ccflags-y += -I$(kbuild-dir)/compat/unaligned/include
+endif
+endif
+
 ifeq ($(wildcard $(srctree)/include/net/udp_tunnel.h),)
 ccflags-y += -I$(kbuild-dir)/compat/udp_tunnel/include
 wireguard-y += compat/udp_tunnel/udp_tunnel.o
 endif
 
 ifeq ($(shell grep -s -F "int crypto_memneq" "$(srctree)/include/crypto/algapi.h"),)
+ifneq ($(shell grep -s -F "crypto_memneq" "$(srctree)/include/crypto/utils.h"),)
+else
 ccflags-y += -include $(kbuild-dir)/compat/memneq/include.h
 wireguard-y += compat/memneq/memneq.o
+endif
+endif
+
+ifneq ($(shell grep -s -F "struct_group" "$(srctree)/include/linux/skbuff.h"),)
+ccflags-y += -DCOMPAT_SKB_HEADERS_GROUP
+endif
+
+ifneq ($(shell grep -s -F "struct rtnl_newlink_params" "$(srctree)/include/net/rtnetlink.h"),)
+ccflags-y += -DCOMPAT_NEWLINK_PARAMS
+endif
+
+ifneq ($(shell grep -s -F "struct genl_info info;" "$(srctree)/include/net/genetlink.h"),)
+ccflags-y += -DCOMPAT_GENL_DUMP_INFO
+endif
+
+ifneq ($(shell grep -s -F "struct flowi_common *flic" "$(srctree)/include/linux/security.h"),)
+ccflags-y += -DCOMPAT_FLOWI_COMMON
+endif
+
+ifneq ($(shell grep -s -F "u16 ipcb_flags" "$(srctree)/include/net/udp_tunnel.h"),)
+ccflags-y += -DCOMPAT_UDP_TUNNEL_CB_FLAGS
+endif
+
+ifneq ($(shell grep -A1 -s -F "setup_udp_tunnel_sock" "$(srctree)/include/net/udp_tunnel.h" | grep -s -F "struct sock *sk"),)
+ccflags-y += -DCOMPAT_UDP_TUNNEL_SOCK
+endif
+
+ifeq ($(shell grep -s -F "ip_tunnel_get_stats64" "$(srctree)/include/net/ip_tunnels.h"),)
+ccflags-y += -DCOMPAT_USE_DEV_TSTATS64
+endif
+
+ifneq ($(shell grep -s -F "timer_delete" "$(srctree)/include/linux/timer.h"),)
+ccflags-y += -DCOMPAT_TIMER_DELETE_ONLY
+endif
+
+ifeq ($(shell grep -s -F "from_timer" "$(srctree)/include/linux/timer.h"),)
+ccflags-y += -DCOMPAT_NO_FROM_TIMER
+endif
+
+ifneq ($(shell grep -s -F "u64_stats_t" "$(srctree)/include/linux/u64_stats_sync.h"),)
+ccflags-y += -DCOMPAT_U64_STATS_TYPE
+endif
+
+ifneq ($(shell grep -s -F "get_random_u32_below" "$(srctree)/include/linux/random.h"),)
+ccflags-y += -DCOMPAT_GET_RANDOM_U32_BELOW
 endif
 
 ifeq ($(shell grep -s -F "addr_gen_mode" "$(srctree)/include/linux/ipv6.h"),)

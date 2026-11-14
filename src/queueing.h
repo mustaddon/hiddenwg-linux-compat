@@ -81,9 +81,13 @@ static inline void wg_reset_packet(struct sk_buff *skb, bool encapsulating)
 	u8 sw_hash = skb->sw_hash;
 
 	skb_scrub_packet(skb, true);
+#ifdef COMPAT_SKB_HEADERS_GROUP
+	memset(&skb->headers, 0, sizeof(skb->headers));
+#else
 	memset(&skb->headers_start, 0,
 	       offsetof(struct sk_buff, headers_end) -
 		       offsetof(struct sk_buff, headers_start));
+#endif
 	skb->pfmemalloc = pfmemalloc;
 	if (encapsulating) {
 		skb->hash = hash;
