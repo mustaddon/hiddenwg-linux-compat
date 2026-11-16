@@ -12,7 +12,7 @@
 #include <linux/timer.h>
 #include <generated/utsrelease.h>
 
-#ifdef COMPAT_TIMER_DELETE_ONLY
+#if defined(COMPAT_TIMER_DELETE_ONLY) && !defined(del_timer)
 #define del_timer timer_delete
 #define del_timer_sync timer_delete_sync
 #endif

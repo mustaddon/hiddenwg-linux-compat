@@ -93,7 +93,10 @@ ccflags-y += -DCOMPAT_USE_DEV_TSTATS64
 endif
 
 ifneq ($(shell grep -s -F "timer_delete" "$(srctree)/include/linux/timer.h"),)
+ifneq ($(shell grep -s -F "del_timer" "$(srctree)/include/linux/timer.h"),)
+else
 ccflags-y += -DCOMPAT_TIMER_DELETE_ONLY
+endif
 endif
 
 ifeq ($(shell grep -s -F "from_timer" "$(srctree)/include/linux/timer.h"),)
