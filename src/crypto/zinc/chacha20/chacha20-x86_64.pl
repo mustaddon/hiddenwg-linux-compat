@@ -105,6 +105,9 @@ if (!$kernel) {
 
 $code.=<<___ if $kernel;
 #include <linux/linkage.h>
+#ifndef RET
+#define RET ret
+#endif
 ___
 
 sub declare_variable() {
@@ -4097,6 +4100,7 @@ foreach (split("\n",$code)) {
 
 	if ($kernel) {
 		s/(^\.type.*),[0-9]+$/\1/;
+		s/^\s*ret\s*$/\tRET/;
 		next if /^\.cfi.*/;
 	}
 

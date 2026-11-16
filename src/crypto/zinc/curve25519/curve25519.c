@@ -10,6 +10,7 @@
  */
 
 #include <zinc/curve25519.h>
+#include "../../zinc.h"
 #include "../selftest/run.h"
 
 #include <asm/unaligned.h>

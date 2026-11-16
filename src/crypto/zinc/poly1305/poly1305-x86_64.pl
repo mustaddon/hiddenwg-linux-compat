@@ -130,6 +130,9 @@ sub end_function() {
 
 $code.=<<___ if $kernel;
 #include <linux/linkage.h>
+#ifndef RET
+#define RET ret
+#endif
 ___
 
 if ($avx) {
@@ -4258,6 +4261,7 @@ foreach (split('\n',$code)) {
 	if ($kernel) {
 		s/(^\.type.*),[0-9]+$/\1/;
 		s/(^\.type.*),\@abi-omnipotent+$/\1,\@function/;
+		s/^\s*ret\s*$/\tRET/;
 		next if /^\.cfi.*/;
 	}
 

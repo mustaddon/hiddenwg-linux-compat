@@ -9,7 +9,23 @@
 #include <linux/kconfig.h>
 #include <linux/version.h>
 #include <linux/types.h>
+#include <linux/timer.h>
 #include <generated/utsrelease.h>
+
+#ifdef COMPAT_TIMER_DELETE_ONLY
+#define del_timer timer_delete
+#define del_timer_sync timer_delete_sync
+#endif
+
+#ifdef COMPAT_NO_FROM_TIMER
+#define from_timer(var, callback_timer, timer_fieldname) \
+	container_of(callback_timer, typeof(*var), timer_fieldname)
+#endif
+
+#ifdef COMPAT_GET_RANDOM_U32_BELOW
+#include <linux/random.h>
+#define prandom_u32_max get_random_u32_below
+#endif
 
 #ifdef RHEL_MAJOR
 #if RHEL_MAJOR == 7
@@ -32,10 +48,6 @@
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 #error "WireGuard requires Linux >= 3.10"
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
-#error "WireGuard has been merged into Linux >= 5.6 and therefore this compatibility module is no longer required."
 #endif
 
 #if defined(ISRHEL7)
@@ -1133,6 +1145,7 @@ struct dst_cache_pcpu {
 	};
 };
 #define COMPAT_HAS_DEFINED_DST_CACHE_PCPU
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 static inline void dst_cache_reset_now(struct dst_cache *dst_cache)
 {
 	int i;
@@ -1150,6 +1163,7 @@ static inline void dst_cache_reset_now(struct dst_cache *dst_cache)
 		dst_release(dst);
 	}
 }
+#endif
 #endif
 
 #if defined(ISUBUNTU1604) || defined(ISRHEL7)

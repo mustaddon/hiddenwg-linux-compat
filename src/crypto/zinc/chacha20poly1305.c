@@ -10,6 +10,7 @@
 #include <zinc/chacha20poly1305.h>
 #include <zinc/chacha20.h>
 #include <zinc/poly1305.h>
+#include "../zinc.h"
 #include "selftest/run.h"
 
 #include <asm/unaligned.h>

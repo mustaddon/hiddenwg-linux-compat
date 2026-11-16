@@ -9,6 +9,7 @@
  */
 
 #include <zinc/blake2s.h>
+#include "../../zinc.h"
 #include "../selftest/run.h"
 
 #include <linux/types.h>

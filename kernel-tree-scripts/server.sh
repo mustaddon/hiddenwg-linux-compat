@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Secure WireGuard server installer
+# Based on Secure WireGuard server installer
 # https://github.com/angristan/wireguard-install
 
 RED='\033[0;31m'
@@ -47,8 +47,8 @@ function checkOS() {
 	source /etc/os-release
 	OS="${ID}"
 	if [[ ${OS} == "debian" || ${OS} == "raspbian" ]]; then
-		if [[ ${VERSION_ID} -lt 10 ]]; then
-			echo "Your version of Debian (${VERSION_ID}) is not supported. Please use Debian 10 Buster or later"
+		if [[ ${VERSION_ID} -lt 11 ]]; then
+			echo "Your version of Debian (${VERSION_ID}) is not supported. Please use Debian 11 or later"
 			exit 1
 		fi
 		OS=debian # overwrite if raspbian
@@ -69,7 +69,10 @@ function checkOS() {
 			exit 1
 		fi
 	elif [[ -e /etc/oracle-release ]]; then
-		source /etc/os-release
+		if [[ ${VERSION_ID%%.*} != 8 ]]; then
+			echo "Oracle Linux ${VERSION_ID} is not supported. Please use Oracle Linux 8"
+			exit 1
+		fi
 		OS=oracle
 	elif [[ -e /etc/arch-release ]]; then
 		OS=arch
@@ -190,17 +193,9 @@ function installWireGuard() {
 	installQuestions
 
 	# Install WireGuard tools and module
-	if [[ ${OS} == 'ubuntu' ]] || [[ ${OS} == 'debian' && ${VERSION_ID} -gt 10 ]]; then
+	if [[ ${OS} == 'ubuntu' ]] || [[ ${OS} == 'debian' ]]; then
 		apt-get update
 		installPackages apt-get install -y wireguard iptables resolvconf qrencode
-	elif [[ ${OS} == 'debian' ]]; then
-		if ! grep -rqs "^deb .* buster-backports" /etc/apt/; then
-			echo "deb http://deb.debian.org/debian buster-backports main" >/etc/apt/sources.list.d/backports.list
-			apt-get update
-		fi
-		apt-get update
-		installPackages apt-get install -y iptables resolvconf qrencode
-		installPackages apt-get install -y -t buster-backports wireguard
 	elif [[ ${OS} == 'fedora' ]]; then
 		if [[ ${VERSION_ID} -lt 32 ]]; then
 			installPackages dnf install -y dnf-plugins-core
@@ -222,10 +217,10 @@ function installWireGuard() {
 		dnf config-manager --save -y --setopt=ol8_developer_UEKR6.includepkgs='wireguard-tools*'
 		installPackages dnf install -y wireguard-tools qrencode iptables
 	elif [[ ${OS} == 'arch' ]]; then
-		installPackages pacman -S --needed --noconfirm wireguard-tools qrencode
+		installPackages pacman -S --needed --noconfirm wireguard-tools iptables qrencode
 	elif [[ ${OS} == 'alpine' ]]; then
 		apk update
-		installPackages apk add wireguard-tools iptables libqrencode-tools
+		installPackages apk add wireguard-tools wireguard-tools-openrc iptables libqrencode-tools
 	fi
 
 	# Verify WireGuard installation
@@ -516,11 +511,11 @@ function uninstallWg() {
 		elif [[ ${OS} == 'oracle' ]]; then
 			yum remove --noautoremove wireguard-tools qrencode
 		elif [[ ${OS} == 'arch' ]]; then
-			pacman -Rs --noconfirm wireguard-tools qrencode
+			pacman -Rs --noconfirm wireguard-tools iptables qrencode
 		elif [[ ${OS} == 'alpine' ]]; then
 			(cd qrencode-4.1.1 || exit && make uninstall)
 			rm -rf qrencode-* || exit
-			apk del wireguard-tools libqrencode libqrencode-tools
+			apk del wireguard-tools wireguard-tools-openrc libqrencode libqrencode-tools
 		fi
 
 		rm -rf /etc/wireguard

@@ -50,7 +50,11 @@ static int send4(struct wg_device *wg, struct sk_buff *skb,
 		rt = dst_cache_get_ip4(cache, &fl.saddr);
 
 	if (!rt) {
+#ifdef COMPAT_FLOWI_COMMON
+		security_sk_classify_flow(sock, flowi4_to_flowi_common(&fl));
+#else
 		security_sk_classify_flow(sock, flowi4_to_flowi(&fl));
+#endif
 		if (unlikely(!inet_confirm_addr(sock_net(sock), NULL, 0,
 						fl.saddr, RT_SCOPE_HOST))) {
 			endpoint->src4.s_addr = 0;
@@ -85,7 +89,11 @@ static int send4(struct wg_device *wg, struct sk_buff *skb,
 	skb->ignore_df = 1;
 	udp_tunnel_xmit_skb(rt, sock, skb, fl.saddr, fl.daddr, ds,
 			    ip4_dst_hoplimit(&rt->dst), 0, fl.fl4_sport,
-			    fl.fl4_dport, false, false);
+			    fl.fl4_dport, false, false
+#ifdef COMPAT_UDP_TUNNEL_CB_FLAGS
+			    , 0
+#endif
+			    );
 	goto out;
 
 err:
@@ -130,7 +138,11 @@ static int send6(struct wg_device *wg, struct sk_buff *skb,
 		dst = dst_cache_get_ip6(cache, &fl.saddr);
 
 	if (!dst) {
+#ifdef COMPAT_FLOWI_COMMON
+		security_sk_classify_flow(sock, flowi6_to_flowi_common(&fl));
+#else
 		security_sk_classify_flow(sock, flowi6_to_flowi(&fl));
+#endif
 		if (unlikely(!ipv6_addr_any(&fl.saddr) &&
 			     !ipv6_chk_addr(sock_net(sock), &fl.saddr, NULL, 0))) {
 			endpoint->src6 = fl.saddr = in6addr_any;
@@ -152,7 +164,11 @@ static int send6(struct wg_device *wg, struct sk_buff *skb,
 	skb->ignore_df = 1;
 	udp_tunnel6_xmit_skb(dst, sock, skb, skb->dev, &fl.saddr, &fl.daddr, ds,
 			     ip6_dst_hoplimit(dst), 0, fl.fl6_sport,
-			     fl.fl6_dport, false);
+			     fl.fl6_dport, false
+#ifdef COMPAT_UDP_TUNNEL_CB_FLAGS
+			     , 0
+#endif
+			     );
 	goto out;
 
 err:
@@ -393,7 +409,11 @@ retry:
 		goto out;
 	}
 	set_sock_opts(new4);
+#ifdef COMPAT_UDP_TUNNEL_SOCK
+	setup_udp_tunnel_sock(net, new4->sk, &cfg);
+#else
 	setup_udp_tunnel_sock(net, new4, &cfg);
+#endif
 
 #if IS_ENABLED(CONFIG_IPV6)
 	if (ipv6_mod_enabled()) {
@@ -408,7 +428,11 @@ retry:
 			goto out;
 		}
 		set_sock_opts(new6);
+#ifdef COMPAT_UDP_TUNNEL_SOCK
+		setup_udp_tunnel_sock(net, new6->sk, &cfg);
+#else
 		setup_udp_tunnel_sock(net, new6, &cfg);
+#endif
 	}
 #endif
 
